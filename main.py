@@ -14,7 +14,6 @@ async def add_middleware(request: Request, call_next):
     request_logger(request)
     return response
 
-ad
 app.include_router(user_router, prefix='/user')
 app.include_router(notes_router, prefix='/notes',
                    dependencies=[Security(APIKeyHeader(name='authorization')), Depends(JWT.authentication)])
