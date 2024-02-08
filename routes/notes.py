@@ -6,10 +6,10 @@ from sqlalchemy.orm import Session
 from model import get_db, Notes, User
 from Core.utils import logger
 
-routes = APIRouter()
+notes_router = APIRouter()
 
 
-@routes.post('/add/{id}', status_code=status.HTTP_201_CREATED, tags=["Notes"])
+@notes_router.post('/add/{id}', status_code=status.HTTP_201_CREATED, tags=["Notes"])
 def create_notes(data: UserNotes, response: Response, db: Session = Depends(get_db),id:int = Path(...,description="Enter the user id")):
     """
     Description: This function used to create the new note
@@ -33,7 +33,7 @@ def create_notes(data: UserNotes, response: Response, db: Session = Depends(get_
         return {'message': str(ex), 'status': 400}
 
 
-@routes.get('/get/{id}', status_code=status.HTTP_200_OK, tags=["Notes"])
+@notes_router.get('/get/{id}', status_code=status.HTTP_200_OK, tags=["Notes"])
 def get_all_user_notes( response: Response, db: Session = Depends(get_db),id:int = Path(...,description="Enter the user id")):
     """
     Description: This function used to get the all notes of the users
@@ -55,7 +55,7 @@ def get_all_user_notes( response: Response, db: Session = Depends(get_db),id:int
         return {'message': str(ex), 'status': 400}
 
 
-@routes.patch('/update/{note_id}', status_code=status.HTTP_200_OK, tags=["Notes"])
+@notes_router.patch('/update/{note_id}', status_code=status.HTTP_200_OK, tags=["Notes"])
 def update_notes(note_id: int, notes: UserNotes, response: Response, db: Session = Depends(get_db)):
     """
         Description: This function used to update the note
@@ -84,7 +84,7 @@ def update_notes(note_id: int, notes: UserNotes, response: Response, db: Session
         return {'message': str(ex), 'status': 400}
 
 
-@routes.delete('/del/{id}', status_code=status.HTTP_200_OK, tags=["Notes"])
+@notes_router.delete('/del/{id}', status_code=status.HTTP_200_OK, tags=["Notes"])
 def del_one_notes_of_user(id: int, response: Response, db: Session = Depends(get_db)):
     """
         Description: This function used to del one notes of the user
@@ -109,7 +109,7 @@ def del_one_notes_of_user(id: int, response: Response, db: Session = Depends(get
         return {'message': str(ex), 'status': 400}
 
 
-@routes.delete('/del_all/{id}', status_code=status.HTTP_200_OK, tags=["Notes"])
+@notes_router.delete('/del_all/{id}', status_code=status.HTTP_200_OK, tags=["Notes"])
 def del_all_notes_of_user(response: Response, db: Session = Depends(get_db),id:int = Path(...,description="Enter the user id")):
     """
         Description: This function used remove a notes of the users.
