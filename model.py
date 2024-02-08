@@ -46,6 +46,7 @@ class Notes(Base):
     def __repr__(self):
         return self.title
 
+
 class Labels(Base):
     __tablename__ = 'label'
     id = Column(Integer, index=True, primary_key=True, nullable=False)
@@ -55,3 +56,11 @@ class Labels(Base):
 
     def __repr__(self):
         return self.label_name
+
+
+class RequestLog(Base):
+    __tablename__ = 'request_logs'
+    id = Column(BigInteger, index=True, primary_key=True)
+    request_method = Column(String)
+    request_path = Column(String)
+    count = Column(BigInteger, default=1)
