@@ -3,13 +3,14 @@ from fastapi import APIRouter, status, Depends, HTTPException, Request,Path
 from schema import UserNotes
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
-from model import get_db, Notes, User
-from Core.utils import logger
+from model import get_db, Notes
+from Core.utils import logger,Redis
+import json
 
 notes_router = APIRouter()
 
 
-@notes_router.post('/add/{id}', status_code=status.HTTP_201_CREATED, tags=["Notes"])
+@notes_router.post('/add', status_code=status.HTTP_201_CREATED, tags=["Notes"])
 def create_notes(data: UserNotes, response: Response, db: Session = Depends(get_db),id:int = Path(...,description="Enter the user id")):
     """
     Description: This function used to create the new note
@@ -26,6 +27,7 @@ def create_notes(data: UserNotes, response: Response, db: Session = Depends(get_
         db.add(notes)
         db.commit()
         db.refresh(notes)
+        Redis.add_redis(f"user_{notes.user_id}", f"notes_{notes.id}", json.dumps(notes_data))
         return {'message': 'Notes Added Successfully ', 'status': 201, 'data': notes}
     except Exception as ex:
         logger.exception(ex)
@@ -33,8 +35,8 @@ def create_notes(data: UserNotes, response: Response, db: Session = Depends(get_
         return {'message': str(ex), 'status': 400}
 
 
-@notes_router.get('/get/{id}', status_code=status.HTTP_200_OK, tags=["Notes"])
-def get_all_user_notes( response: Response, db: Session = Depends(get_db),id:int = Path(...,description="Enter the user id")):
+@notes_router.get('/get', status_code=status.HTTP_200_OK, tags=["Notes"])
+def get_all_user_notes( response: Response,request:Request, db: Session = Depends(get_db)):
     """
     Description: This function used to get the all notes of the users
     Parameter:  user : UserLogin in that username and password
@@ -44,7 +46,11 @@ def get_all_user_notes( response: Response, db: Session = Depends(get_db),id:int
     Return: message, status code and data in the JSON or dict format
     """
     try:
-        notes = db.query(Notes).filter_by(user_id=id).all()
+        cache_notes = Redis.getall_redis(f"user_{request.state.user.id}")
+        if cache_notes:
+            data = list(map(lambda note: json.loads(note), cache_notes.values()))
+            return {'message': "Notes Founds using Redis ", 'status': 200, 'data': data}
+        notes = db.query(Notes).filter_by(user_id=request.state.user.id).all()
         # notes = db.query(Notes).filter_by(user_id=user_id).all()
         if not notes:
             return {'message': "User Does not have any notes ", 'status': 400}
@@ -56,7 +62,7 @@ def get_all_user_notes( response: Response, db: Session = Depends(get_db),id:int
 
 
 @notes_router.patch('/update/{note_id}', status_code=status.HTTP_200_OK, tags=["Notes"])
-def update_notes(note_id: int, notes: UserNotes, response: Response, db: Session = Depends(get_db)):
+def update_notes(note_id: int, notes: UserNotes,request:Request, response: Response, db: Session = Depends(get_db)):
     """
         Description: This function used to update the note
         Parameter:  title : str
@@ -69,7 +75,7 @@ def update_notes(note_id: int, notes: UserNotes, response: Response, db: Session
     try:
         # note = db.query(Notes).filter_by(title=title).one_or_none()
 
-        note = db.query(Notes).filter_by(id=note_id).one_or_none()
+        note = db.query(Notes).filter_by(user_id=request.state.user.id,id=note_id).one_or_none()
         if not notes:
             return {'message': "User Does not have any notes ", 'status': 400}
 
@@ -77,6 +83,7 @@ def update_notes(note_id: int, notes: UserNotes, response: Response, db: Session
         [setattr(note, key, value) for key, value in updated_data.items()]
         db.commit()
         db.refresh(note)
+        Redis.add_redis(f"user_{request.state.user.id}", f"notes_{note.id}", json.dumps(updated_data))
         return {'message': "Notes updated Successfully ", 'status': 200,"data":updated_data}
     except Exception as ex:
         logger.exception(ex)
@@ -85,7 +92,7 @@ def update_notes(note_id: int, notes: UserNotes, response: Response, db: Session
 
 
 @notes_router.delete('/del/{id}', status_code=status.HTTP_200_OK, tags=["Notes"])
-def del_one_notes_of_user(id: int, response: Response, db: Session = Depends(get_db)):
+def del_one_notes_of_user(request:Request, response: Response, db: Session = Depends(get_db),id: int=Path(...,description="Enter notes ID ")):
     """
         Description: This function used to del one notes of the user
         Parameter:  title : str
@@ -102,6 +109,7 @@ def del_one_notes_of_user(id: int, response: Response, db: Session = Depends(get
             raise HTTPException(detail="Note is not present",status_code=status.HTTP_400_BAD_REQUEST)
         db.delete(note)
         db.commit()
+        Redis.del_redis(f"user_{request.state.user.id}", f"notes_{id}")
         return {'message': "Deletes Note of the User ", 'status': 200}
     except Exception as ex:
         logger.exception(ex)
@@ -109,8 +117,8 @@ def del_one_notes_of_user(id: int, response: Response, db: Session = Depends(get
         return {'message': str(ex), 'status': 400}
 
 
-@notes_router.delete('/del_all/{id}', status_code=status.HTTP_200_OK, tags=["Notes"])
-def del_all_notes_of_user(response: Response, db: Session = Depends(get_db),id:int = Path(...,description="Enter the user id")):
+@notes_router.delete('/del_all', status_code=status.HTTP_200_OK, tags=["Notes"])
+def del_all_notes_of_user(request:Request,response: Response, db: Session = Depends(get_db),id:int = Path(...,description="Enter the user id")):
     """
         Description: This function used remove a notes of the users.
         Parameter:  request as Request Object,response as Response object,
@@ -118,15 +126,16 @@ def del_all_notes_of_user(response: Response, db: Session = Depends(get_db),id:i
         Return: it return the message and status code in JSON or dict format
     """
     try:
-        notes = db.query(Notes).filter_by(user_id=id).all()
+        notes = db.query(Notes).filter_by(user_id=request.state.user.id).all()
         # notes = db.query(Notes).filter_by(user_id=user_id).first()
         if not notes:
             return {'message': "User not write any notes ", 'status': 200}
-        # for i in notes:
-        #     print(type(i))
-        #     db.delete(i)
+
         [db.delete(i) for i in notes]
         db.commit()
+        for i in notes:
+            Redis.del_redis(f"user_{request.state.user.id}", f"notes_{i.id}")
+
         return {'message': "Deleted Notes of Users", 'status': 200}
     except Exception as ex:
         logger.exception(ex)
