@@ -1,11 +1,12 @@
-from fastapi import status, HTTPException
+from fastapi import status, HTTPException,Response,Request,Depends
 from datetime import timedelta, datetime
 from jose import JWTError, jwt
+from sqlalchemy.orm import Session
+from model import get_db,User
 import pytz
 from Core import settings
 from passlib.hash import pbkdf2_sha256
 import logging
-
 logging.basicConfig(filename='./fundoo_notes.log', encoding='utf-8', level=logging.DEBUG,
                     format='%(asctime)s | %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 logger = logging.getLogger()
@@ -32,3 +33,12 @@ class JWT:
             return jwt.decode(token, settings.sec_key, settings.algo)
         except JWTError as ex:
             raise HTTPException(detail=str(ex), status_code=status.HTTP_401_UNAUTHORIZED)
+    @staticmethod
+    def jwt_authentication(request: Request, db: Session = Depends(get_db)):
+        token = request.headers.get('authorization')
+        decode_token = JWT.decode_data(token)
+        user_id = decode_token.get('user_id')
+        user = db.query(User).filter_by(id=user_id).one_or_none()
+        if not user:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+        request.state.user = user
