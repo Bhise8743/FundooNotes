@@ -17,3 +17,8 @@ class UserDetails(UserLogin):
     city: str = Field('Enter city')
     state: str = Field('Enter state ')
 
+class UserNotes(BaseModel):
+    title: str = Field("Enter title ", pattern=r'^[A-Z]{1}\D{1,}')
+    description: str
+    color: str
+    user_id:int
