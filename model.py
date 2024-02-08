@@ -45,3 +45,13 @@ class Notes(Base):
 
     def __repr__(self):
         return self.title
+
+class Labels(Base):
+    __tablename__ = 'label'
+    id = Column(Integer, index=True, primary_key=True, nullable=False)
+    label_name = Column(String, nullable=False)
+    user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    user = relationship('User', back_populates='label')
+
+    def __repr__(self):
+        return self.label_name
