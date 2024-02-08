@@ -2,7 +2,7 @@ from fastapi import status, HTTPException, Response, Request, Depends
 from datetime import timedelta, datetime
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
-from model import get_db, User
+from model import get_db, User, RequestLog
 import pytz
 from Core import settings
 from passlib.hash import pbkdf2_sha256
@@ -12,6 +12,21 @@ import redis
 logging.basicConfig(filename='./fundoo_notes.log', encoding='utf-8', level=logging.DEBUG,
                     format='%(asctime)s | %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
 logger = logging.getLogger()
+
+
+def request_logger(request):
+    # Get request details
+    session = get_db()
+    db = next(session)  # iterator and generator concept  => it give the data line by or one by one
+    method = request.method
+    path = request.url.path
+    log = db.query(RequestLog).filter_by(request_method=method, request_path=path).one_or_none()
+    if log is None:
+        log = RequestLog(request_method=method, request_path=path, count=1)
+        db.add(log)
+    else:
+        log.count += 1
+    db.commit()
 
 
 def hash_password(password):
