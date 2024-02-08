@@ -1,9 +1,18 @@
 import smtplib, ssl
 from email.message import EmailMessage
 from Core.settings import email_sender, email_passwrod
+from celery import Celery
+
+celery = Celery(__name__,
+                broker="redis://127.0.0.1:6379/0",
+                backend="redis://127.0.0.1:6379/0",
+                broker_connection_retry_on_startup=True
+                )
 
 mail = EmailMessage()
 
+
+@celery.task()
 def email_verification(recipient, link):
     import time
     time.sleep(5)
@@ -27,3 +36,6 @@ def email_verification(recipient, link):
         smtp.sendmail(sender, recipient, mail.as_string())
         smtp.quit()
     return f" {recipient} Email send Successfully"
+
+# running the celery workers
+# celery -A task.celery worker -l info --pool=solo -E
