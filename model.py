@@ -16,6 +16,10 @@ def get_db():
         db.close()
 
 
+collaborator = Table('collaborator', Base.metadata, Column('user_id', BigInteger, ForeignKey('user.id')),
+                     Column('note_id', BigInteger, ForeignKey('notes.id')))
+
+
 class User(Base):
     __tablename__ = 'user'
     id = Column(Integer, primary_key=True, index=True, nullable=False)
@@ -28,6 +32,9 @@ class User(Base):
     city = Column(String(50), nullable=False)
     state = Column(String(50), nullable=False)
     is_verified = Column(Boolean, default=False)
+    notes = relationship('Notes', back_populates='user')
+    label = relationship('Labels', back_populates='user')
+    notes_m2m = relationship('Notes', secondary=collaborator, overlaps='user')
 
     def __repr__(self):  # this method used to define string representation of object
         return self.user_name
@@ -42,6 +49,7 @@ class Notes(Base):
     reminder = Column(DateTime, default=None)
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     user = relationship('User', back_populates='notes')
+    user_m2m = relationship('User', secondary=collaborator, overlaps='notes')
 
     def __repr__(self):
         return self.title
@@ -64,3 +72,4 @@ class RequestLog(Base):
     request_method = Column(String)
     request_path = Column(String)
     count = Column(BigInteger, default=1)
+    # user = Column(String,nullable=True)
