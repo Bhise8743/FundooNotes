@@ -22,10 +22,10 @@ from Core.utils import hash_password,verify_password,JWT,logger
 from task import email_verification
 warnings.filterwarnings("ignore")
 
-router = APIRouter()
+user_router = APIRouter()
 
 
-@router.post('/register', status_code=status.HTTP_201_CREATED, tags=["User"])
+@user_router.post('/register', status_code=status.HTTP_201_CREATED, tags=["User"])
 async def user_registration(user: UserDetails, response: Response, db: Session = Depends(get_db)):
     """
         Description: This function used to takes the information from user and stores on Database
@@ -58,7 +58,7 @@ async def user_registration(user: UserDetails, response: Response, db: Session =
         return {'message': str(ex), 'status': 400}
 
 
-@router.post('/login', status_code=status.HTTP_200_OK, tags=["User"])
+@user_router.post('/login', status_code=status.HTTP_200_OK, tags=["User"])
 def user_login(data: UserLogin, response: Response, db: Session = Depends(get_db)):
     """
         Description: This function used to takes the information from user and stores on Database
@@ -86,7 +86,7 @@ def user_login(data: UserLogin, response: Response, db: Session = Depends(get_db
         response.status_code = status.HTTP_400_BAD_REQUEST
         return {'message': str(ex), 'status': 400}
 
-@router.get('/verify', status_code=status.HTTP_200_OK, tags=["User"])
+@user_router.get('/verify', status_code=status.HTTP_200_OK, tags=["User"])
 def verify_token(token: str = None, db: Session = Depends(get_db)):
     try:
         decoded_data = JWT.decode_data(token)
