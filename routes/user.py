@@ -71,7 +71,6 @@ def user_login(data: UserLogin, response: Response, db: Session = Depends(get_db
 
     """
     try:
-        # valid_user = db.query(User).filter( log_user.user_name == User.user_name and log_user.password == User.password).first()
         valid_user = db.query(User).filter_by(user_name=data.user_name).one_or_none()
         if not valid_user:
             raise HTTPException(detail='Invalid Username ', status_code=status.HTTP_401_UNAUTHORIZED)
@@ -80,11 +79,15 @@ def user_login(data: UserLogin, response: Response, db: Session = Depends(get_db
         if valid_user.is_verified is False:
             raise HTTPException(detail="Your Username and Password is valid But You are NOT VALID user",
                                 status_code=status.HTTP_403_FORBIDDEN)
-        return {'message': 'Successfully Logged In', 'status': 200}
+        token = JWT.encode_data({'user_id': valid_user.id})
+
+        # if valid_user.
+        return {'message': 'Successfully Logged In', 'status': 200, 'access_token': token}
     except Exception as ex:
         logger.exception(ex)
         response.status_code = status.HTTP_400_BAD_REQUEST
         return {'message': str(ex), 'status': 400}
+
 
 @user_router.get('/verify', status_code=status.HTTP_200_OK, tags=["User"])
 def verify_token(token: str = None, db: Session = Depends(get_db)):
