@@ -4,7 +4,11 @@ from jose import JWTError, jwt
 import pytz
 from Core import settings
 from passlib.hash import pbkdf2_sha256
+import logging
 
+logging.basicConfig(filename='./fundoo_notes.log', encoding='utf-8', level=logging.DEBUG,
+                    format='%(asctime)s | %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+logger = logging.getLogger()
 
 def hash_password(password):
     return pbkdf2_sha256.hash(password)
