@@ -46,7 +46,7 @@ async def user_registration(user: UserDetails, response: Response, db: Session =
         db.refresh(user)
         token = JWT.encode_data({"user_id": user.id})  # after that token go to the mail id and verify the email
         verify_user_link = f"http://127.0.0.1:8080/user/verify?token={token}"
-        email_verification(user.email, verify_user_link)
+        email_verification.delay(user.email, verify_user_link)
         return {'message': f"User Added successfully ", 'status': 201, 'data': user_data}
     except IntegrityError as ex:
         logger.exception(ex)
