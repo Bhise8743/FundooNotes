@@ -8,6 +8,6 @@ app = FastAPI(title="Fundoo Notes")
 
 app.include_router(user_router, prefix='/user')
 app.include_router(notes_router, prefix='/notes',
-                   dependencies=[Security(APIKeyHeader(name='authorization')), Depends(JWT.jwt_authentication)])
+                   dependencies=[Security(APIKeyHeader(name='authorization')), Depends(JWT.authentication)])
 app.include_router(label_router, prefix='/labels',
-                   dependencies=[Security(APIKeyHeader(name='authorization')), Depends(JWT.jwt_authentication)])
+                   dependencies=[Security(APIKeyHeader(name='authorization')), Depends(JWT.authentication)])
