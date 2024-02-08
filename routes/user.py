@@ -18,8 +18,8 @@ from schema import UserDetails, UserLogin
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from model import get_db, User
-from Core.utils import hash_password,verify_password
-
+from Core.utils import hash_password,verify_password,JWT,logger
+from task import email_verification
 warnings.filterwarnings("ignore")
 
 router = APIRouter()
@@ -44,11 +44,16 @@ async def user_registration(user: UserDetails, response: Response, db: Session =
         db.add(user)
         db.commit()
         db.refresh(user)
+        token = JWT.encode_data({"user_id": user.id})  # after that token go to the mail id and verify the email
+        verify_user_link = f"http://127.0.0.1:8080/user/verify?token={token}"
+        email_verification(user.email, verify_user_link)
         return {'message': f"User Added successfully ", 'status': 201, 'data': user_data}
     except IntegrityError as ex:
+        logger.exception(ex)
         response.status_code = status.HTTP_400_BAD_REQUEST
         return {'message': "Username or Email is already exist", 'status': 400}
     except Exception as ex:
+        logger.exception(ex)
         response.status_code = status.HTTP_400_BAD_REQUEST
         return {'message': str(ex), 'status': 400}
 
@@ -75,11 +80,25 @@ def user_login(data: UserLogin, response: Response, db: Session = Depends(get_db
         if valid_user.is_verified is False:
             raise HTTPException(detail="Your Username and Password is valid But You are NOT VALID user",
                                 status_code=status.HTTP_403_FORBIDDEN)
-
         return {'message': 'Successfully Logged In', 'status': 200}
     except Exception as ex:
+        logger.exception(ex)
         response.status_code = status.HTTP_400_BAD_REQUEST
         return {'message': str(ex), 'status': 400}
 
+@router.get('/verify', status_code=status.HTTP_200_OK, tags=["User"])
+def verify_token(token: str = None, db: Session = Depends(get_db)):
+    try:
+        decoded_data = JWT.decode_data(token)
+        user_id = decoded_data.get('user_id')  # it get the id form the token only
+        user = db.query(User).filter_by(id=user_id).one_or_none()
+        if user is None:
+            raise HTTPException(detail="User is None", status_code=status.HTTP_401_UNAUTHORIZED)
+        user.is_verified = True
+        db.commit()
+        return {'message': "User Verified successful", 'status': 200, 'data': user}
+    except Exception as ex:
+        logger.exception(ex)
+        return {'message': f"Verification Error {str(ex)}"}
 
 

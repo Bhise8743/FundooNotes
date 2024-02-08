@@ -31,3 +31,17 @@ class User(Base):
 
     def __repr__(self):  # this method used to define string representation of object
         return self.user_name
+
+
+class Notes(Base):
+    __tablename__ = 'notes'
+    id = Column(Integer, index=True, primary_key=True, nullable=False)
+    title = Column(String(50), nullable=False, unique=True)
+    description = Column(Text, nullable=False)
+    color = Column(String(20), nullable=False)
+    reminder = Column(DateTime, default=None)
+    user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    user = relationship('User', back_populates='notes')
+
+    def __repr__(self):
+        return self.title
